@@ -34,12 +34,11 @@ function sendJson(res, data, statusCode) {
 }
 
 function ok(platform, data) {
-  return sendJson(res, { code: 200, msg: '\u89e3\u6790\u6210\u529f', platform: platform, data: data });
+  return { _ok: true, platform: platform, data: data };
 }
 
 function fail(msg, codeValue) {
-  codeValue = codeValue || 500;
-  return sendJson(res, { code: codeValue, msg: msg }, codeValue);
+  return { _fail: true, msg: msg, code: codeValue || 500 };
 }
 
 function detectPlatform(url) {
@@ -475,6 +474,10 @@ async function parseWeibo(originalUrl) {
 
 
 module.exports = async function(req, res) {
+  function useResult(r) {
+    if (r && r._ok) return sendJson(res, { code: 200, msg: '解析成功', platform: r.platform, data: r.data });
+    if (r && r._fail) return sendJson(res, { code: r.code, msg: r.msg }, r.code);
+  }
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -483,7 +486,7 @@ module.exports = async function(req, res) {
     }
 
     const targetUrl = req.query.url;
-        if (!targetUrl) return fail('缺少 url 参数', 400);
+        if (!targetUrl) return useResult(fail('缺少 url 参数', 400));
     
         }
 
@@ -508,11 +511,11 @@ module.exports = async function(req, res) {
           data = await parseWeibo(targetUrl);
           break;
         default:
-          return fail('暂不支持该平台链接', 400);
+          return useResult(fail('暂不支持该平台链接', 400));
       }
-      return ok(platform, data);
+      return useResult(ok(platform, data));
     } catch (e) {
-      return fail('解析失败: ' + (e && e.message ? e.message : String(e)), 500);
+      return useResult(fail('解析失败: ' + (e && e.message ? e.message : String(e)), 500));
     }
   }
 
