@@ -1,0 +1,18 @@
+{
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/parse",
+      "dest": "index.js"
+    },
+    {
+      "src": "/api/parse.js",
+      "dest": "index.js"
+    }
+  ]
+}
