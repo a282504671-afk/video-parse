@@ -1,11 +1,10 @@
 /**
- * 多平台短视频解析 Worker（仿 BugPk 返回格式）
- * 用法: GET https://你的worker地址.workers.dev/?url=视频分享链接
+ * 澶氬钩鍙扮煭瑙嗛瑙ｆ瀽 Worker锛堜豢 BugPk 杩斿洖鏍煎紡锛? * 鐢ㄦ硶: GET https://浣犵殑worker鍦板潃.workers.dev/?url=瑙嗛鍒嗕韩閾炬帴
  *
- * 返回格式与 BugPk 保持一致，方便你的 Flutter 端少改代码：
+ * 杩斿洖鏍煎紡涓?BugPk 淇濇寔涓€鑷达紝鏂逛究浣犵殑 Flutter 绔皯鏀逛唬鐮侊細
  * {
  *   "code": 200,
- *   "msg": "解析成功",
+ *   "msg": "瑙ｆ瀽鎴愬姛",
  *   "platform": "douyin",
  *   "data": {
  *     "type": "video" | "image",
@@ -18,11 +17,7 @@
  *   }
  * }
  *
- * 维护说明：
- * - 这类解析靠抓"分享页 HTML 里嵌的 JSON"，平台改版会导致正则/JSON路径失效。
- * - 平台一旦改版，通常只需要改对应 parseXxx() 函数里的正则，不用大改架构。
- * - 部署：把这个文件内容粘到 Cloudflare Workers 的代码编辑器，或连接 GitHub 仓库自动部署。
- */
+ * 缁存姢璇存槑锛? * - 杩欑被瑙ｆ瀽闈犳姄"鍒嗕韩椤?HTML 閲屽祵鐨?JSON"锛屽钩鍙版敼鐗堜細瀵艰嚧姝ｅ垯/JSON璺緞澶辨晥銆? * - 骞冲彴涓€鏃︽敼鐗堬紝閫氬父鍙渶瑕佹敼瀵瑰簲 parseXxx() 鍑芥暟閲岀殑姝ｅ垯锛屼笉鐢ㄥぇ鏀规灦鏋勩€? * - 閮ㄧ讲锛氭妸杩欎釜鏂囦欢鍐呭绮樺埌 Cloudflare Workers 鐨勪唬鐮佺紪杈戝櫒锛屾垨杩炴帴 GitHub 浠撳簱鑷姩閮ㄧ讲銆? */
 
 const UA_MOBILE =
   'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
@@ -34,7 +29,7 @@ function sendJson(res, data, statusCode) {
 }
 
 function ok(platform, data) {
-  return { _vercel: true, code: 200, msg: '解析成功', platform: platform, data: data };
+  return { _vercel: true, code: 200, msg: '瑙ｆ瀽鎴愬姛', platform: platform, data: data };
 }
 
 function fail(msg, code = 500) {
@@ -50,7 +45,7 @@ function detectPlatform(url) {
   return 'unknown';
 }
 
-// 跟随短链跳转，拿到最终真实地址
+// 璺熼殢鐭摼璺宠浆锛屾嬁鍒版渶缁堢湡瀹炲湴鍧€
 async function resolveRedirect(url) {
   try {
     const res = await fetch(url, {
@@ -77,9 +72,9 @@ async function fetchHtml(url, extraHeaders = {}) {
   return await res.text();
 }
 
-// ================= 抖音 =================
-// 思路：分享短链跳转到 iesdouyin SSR 详情页，页面 HTML 里嵌有完整视频数据的 JSON（item_list），
-// 直接在 HTML 中提取比调 API 更稳定（API 需要签名/登录态）
+// ================= 鎶栭煶 =================
+// 鎬濊矾锛氬垎浜煭閾捐烦杞埌 iesdouyin SSR 璇︽儏椤碉紝椤甸潰 HTML 閲屽祵鏈夊畬鏁磋棰戞暟鎹殑 JSON锛坕tem_list锛夛紝
+// 鐩存帴鍦?HTML 涓彁鍙栨瘮璋?API 鏇寸ǔ瀹氾紙API 闇€瑕佺鍚?鐧诲綍鎬侊級
 function extractDouyinItemId(url) {
   var m = url.match(/\/(?:share\/)?video\/(\d{6,})/);
   if (m) return m[1];
@@ -92,12 +87,12 @@ function extractDouyinItemId(url) {
   return null;
 }
 
-// 从 HTML 中提取 item_list JSON 数组
+// 浠?HTML 涓彁鍙?item_list JSON 鏁扮粍
 function extractDouyinDataFromHtml(html) {
   var start = html.indexOf('"item_list":[');
   if (start < 0) return null;
   start += '"item_list":['.length;
-  // 用栈匹配找到闭合的 ]
+  // 鐢ㄦ爤鍖归厤鎵惧埌闂悎鐨?]
   var depth = 1;
   var inStr = false;
   var escape = false;
@@ -123,20 +118,19 @@ function extractDouyinDataFromHtml(html) {
 async function parseDouyin(originalUrl) {
   var realUrl = await resolveRedirect(originalUrl);
   var itemId = extractDouyinItemId(realUrl) || extractDouyinItemId(originalUrl);
-  if (!itemId) throw new Error('未能从链接中提取视频ID');
+  if (!itemId) throw new Error('鏈兘浠庨摼鎺ヤ腑鎻愬彇瑙嗛ID');
 
-  // 从 HTML 中提取数据
-  var html = await fetchHtml(realUrl, { Referer: 'https://www.douyin.com/' });
+  // 浠?HTML 涓彁鍙栨暟鎹?  var html = await fetchHtml(realUrl, { Referer: 'https://www.douyin.com/' });
   var item = extractDouyinDataFromHtml(html);
-  if (!item) throw new Error('从页面 HTML 中提取视频数据失败，item_id=' + itemId + '，页面结构可能已变化');
+  if (!item) throw new Error('浠庨〉闈?HTML 涓彁鍙栬棰戞暟鎹け璐ワ紝item_id=' + itemId + '锛岄〉闈㈢粨鏋勫彲鑳藉凡鍙樺寲');
 
   var video = item.video || {};
   var author = item.author || {};
 
   var playUrl = (video.play_addr && video.play_addr.url_list && video.play_addr.url_list[0]) || '';
-  // 去水印：playwm -> play
+  // 鍘绘按鍗帮細playwm -> play
   if (playUrl) playUrl = playUrl.replace('playwm', 'play');
-  // unicode 转义修复
+  // unicode 杞箟淇
   if (playUrl) playUrl = playUrl.replace(/\\u002F/g, '/');
 
   var images = (item.images || [])
@@ -161,20 +155,20 @@ async function parseDouyin(originalUrl) {
     images: images,
   };
 }
-// ================= B站 =================
-// 官方公开API，不需要登录：先拿 bvid -> view 接口拿 cid/aid -> playurl 接口拿真实流地址
+// ================= B绔?=================
+// 瀹樻柟鍏紑API锛屼笉闇€瑕佺櫥褰曪細鍏堟嬁 bvid -> view 鎺ュ彛鎷?cid/aid -> playurl 鎺ュ彛鎷跨湡瀹炴祦鍦板潃
 async function parseBilibili(originalUrl) {
   var realUrl = originalUrl;
   if (realUrl.includes('b23.tv')) realUrl = await resolveRedirect(realUrl);
 
   var bvMatch = realUrl.match(/BV[0-9A-Za-z]+/);
-  if (!bvMatch) throw new Error('未识别到BV号');
+  if (!bvMatch) throw new Error('鏈瘑鍒埌BV鍙?);
   var bvid = bvMatch[0];
 
   var info = null;
   var videoUrl = '';
 
-  // 方式1: 调官方 API（带更多请求头）
+  // 鏂瑰紡1: 璋冨畼鏂?API锛堝甫鏇村璇锋眰澶达級
   try {
     var viewRes = await fetch('https://api.bilibili.com/x/web-interface/view?bvid=' + bvid, {
       headers: {
@@ -191,11 +185,11 @@ async function parseBilibili(originalUrl) {
     }
   } catch(e) {}
 
-  // 方式2: 从页面 HTML 提取数据
+  // 鏂瑰紡2: 浠庨〉闈?HTML 鎻愬彇鏁版嵁
   if (!info) {
     try {
       var html = await fetchHtml(realUrl, { Referer: 'https://www.bilibili.com/' });
-      // 尝试多种 __INITIAL_STATE__ 格式
+      // 灏濊瘯澶氱 __INITIAL_STATE__ 鏍煎紡
       var stateStr = null;
       var m1 = html.match(/window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]+?\})\s*;?\s*(?:<\/script>|\(function)/);
       if (m1) stateStr = m1[1];
@@ -219,7 +213,7 @@ async function parseBilibili(originalUrl) {
           }
         } catch(e) {}
       }
-      // 备选: 从 og:meta 提取
+      // 澶囬€? 浠?og:meta 鎻愬彇
       if (!info) {
         var ogT = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/);
         var ogI = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/);
@@ -230,9 +224,9 @@ async function parseBilibili(originalUrl) {
     } catch(e) {}
   }
 
-  if (!info) throw new Error('获取B站视频信息失败');
+  if (!info) throw new Error('鑾峰彇B绔欒棰戜俊鎭け璐?);
 
-  // 获取视频流地址
+  // 鑾峰彇瑙嗛娴佸湴鍧€
   if (info.cid && info.aid) {
     try {
       var playRes = await fetch('https://api.bilibili.com/x/player/playurl?avid=' + info.aid + '&cid=' + info.cid + '&qn=80&fnval=16', {
@@ -261,8 +255,8 @@ async function parseBilibili(originalUrl) {
     url: videoUrl,
     images: [],
   };
-}// ================= 快手 =================
-// 思路同抖音：分享页里有 window.__APOLLO_STATE__ 或 __NUXT__ 内嵌JSON
+}// ================= 蹇墜 =================
+// 鎬濊矾鍚屾姈闊筹細鍒嗕韩椤甸噷鏈?window.__APOLLO_STATE__ 鎴?__NUXT__ 鍐呭祵JSON
 async function parseKuaishou(originalUrl) {
   var realUrl = await resolveRedirect(originalUrl);
   var html = await fetchHtml(realUrl, { Referer: 'https://www.kuaishou.com/' });
@@ -272,14 +266,14 @@ async function parseKuaishou(originalUrl) {
   var cover = '';
   var authorName = '';
 
-  // 方式1: 从 HTML 中提取视频地址（多种模式）
+  // 鏂瑰紡1: 浠?HTML 涓彁鍙栬棰戝湴鍧€锛堝绉嶆ā寮忥級
   var patterns = [/"srcUrl"\s*:\s*"([^"]+)"/, /"playUrl"\s*:\s*"([^"]+)"/, /"url"\s*:\s*"([^"]*\.(?:mp4|m3u8)[^"]*)"/, /video-url=\"([^\"]+)\"/, /data-url=\"([^"']+)\"/];
   for (var i = 0; i < patterns.length; i++) {
     var m = html.match(patterns[i]);
     if (m) { videoUrl = m[1].replace(/\\u002F/g, '/').replace(/\\\//g, '/'); break; }
   }
 
-  // 方式2: 从 og:meta 提取
+  // 鏂瑰紡2: 浠?og:meta 鎻愬彇
   var ogT = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/);
   if (ogT) title = ogT[1];
   var ogI = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/);
@@ -289,13 +283,12 @@ async function parseKuaishou(originalUrl) {
   var ogVU = html.match(/<meta[^>]*property="og:video:url"[^>]*content="([^"]+)"/);
   if (ogVU && !videoUrl) videoUrl = ogVU[1];
 
-  // 方式3: 从 HTML 中提取封面
-  if (!cover) {
+  // 鏂瑰紡3: 浠?HTML 涓彁鍙栧皝闈?  if (!cover) {
     var cMatch = html.match(/<meta[^>]*name="og:image"[^>]*content="([^"]+)"/);
     if (cMatch) cover = cMatch[1];
   }
 
-  // 方式4: 找作者名
+  // 鏂瑰紡4: 鎵句綔鑰呭悕
   if (!authorName) {
     var aMatch = html.match(/"name"\s*:\s*"([^"]+)"\s*,\s*"avatar"/);
     if (!aMatch) aMatch = html.match(/"user_name"\s*:\s*"([^"]+)"/);
@@ -304,7 +297,7 @@ async function parseKuaishou(originalUrl) {
   }
 
   if (!videoUrl && !cover) {
-    throw new Error('未提取到快手视频地址，页面结构可能已变化');
+    throw new Error('鏈彁鍙栧埌蹇墜瑙嗛鍦板潃锛岄〉闈㈢粨鏋勫彲鑳藉凡鍙樺寲');
   }
 
   return {
@@ -316,9 +309,8 @@ async function parseKuaishou(originalUrl) {
     url: videoUrl || '',
     images: [],
   };
-}// ================= 小红书 =================
-// 思路同抖音：详情页里有 window.__INITIAL_STATE__，但写法/转义方式可能因页面版本不同有差异，
-// 这里做多种容错匹配 + 兜底用 og:meta 标签
+}// ================= 灏忕孩涔?=================
+// 鎬濊矾鍚屾姈闊筹細璇︽儏椤甸噷鏈?window.__INITIAL_STATE__锛屼絾鍐欐硶/杞箟鏂瑰紡鍙兘鍥犻〉闈㈢増鏈笉鍚屾湁宸紓锛?// 杩欓噷鍋氬绉嶅閿欏尮閰?+ 鍏滃簳鐢?og:meta 鏍囩
 async function parseXiaohongshu(originalUrl) {
   var realUrl = await resolveRedirect(originalUrl);
   var html = await fetchHtml(realUrl, { Referer: 'https://www.xiaohongshu.com/' });
@@ -330,30 +322,28 @@ async function parseXiaohongshu(originalUrl) {
   var authorAvatar = '';
   var images = [];
 
-  // 方式1: 从 SSR HTML 中提取封面图
+  // 鏂瑰紡1: 浠?SSR HTML 涓彁鍙栧皝闈㈠浘
   var posterMatch = html.match(/id=["']video_note_poster["'][^>]*src=["']([^"']+)["']/);
   if (posterMatch) {
     cover = posterMatch[1];
     if (cover.indexOf('http://') === 0) cover = 'https://' + cover.substring(7);
   }
-  // 也尝试其他封面图
+  // 涔熷皾璇曞叾浠栧皝闈㈠浘
   if (!cover) {
     var ogI = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/);
     if (ogI) cover = ogI[1];
   }
 
-  // 方式2: 从 SSR HTML 中提取标题（<title> 只有'小红书'，主要看 note-card 或其他）
+  // 鏂瑰紡2: 浠?SSR HTML 涓彁鍙栨爣棰橈紙<title> 鍙湁'灏忕孩涔?锛屼富瑕佺湅 note-card 鎴栧叾浠栵級
   var h1Match = html.match(/note-card-title[^>]*><!--\[-->([^<]+)/);
   if (h1Match) title = h1Match[1].trim();
 
-  // 方式3: 从 HTML 中提取作者信息
-  var nameMatch = html.match(/note-card-name[^>]*><!--\[-->([^<]+)/);
+  // 鏂瑰紡3: 浠?HTML 涓彁鍙栦綔鑰呬俊鎭?  var nameMatch = html.match(/note-card-name[^>]*><!--\[-->([^<]+)/);
   if (nameMatch) authorName = nameMatch[1].trim();
-  var avaMatch = html.match(/<img[^>]*alt=["']头像["'][^>]*src=["']([^"']+)["']/);
+  var avaMatch = html.match(/<img[^>]*alt=["']澶村儚["'][^>]*src=["']([^"']+)["']/);
   if (avaMatch) authorAvatar = avaMatch[1];
 
-  // 方式4: 从 __INITIAL_STATE__ 中提取（括号匹配）
-  var stateStart = html.indexOf('__INITIAL_STATE__=');
+  // 鏂瑰紡4: 浠?__INITIAL_STATE__ 涓彁鍙栵紙鎷彿鍖归厤锛?  var stateStart = html.indexOf('__INITIAL_STATE__=');
   if (stateStart >= 0) {
     stateStart += '__INITIAL_STATE__='.length;
     while (stateStart < html.length && (html[stateStart] === ' ' || html[stateStart] === '"')) stateStart++;
@@ -399,8 +389,7 @@ async function parseXiaohongshu(originalUrl) {
     }
   }
 
-  // 方式5: 用 edith API（需要 xsec_token）
-  if (!videoUrl && !images.length) {
+  // 鏂瑰紡5: 鐢?edith API锛堥渶瑕?xsec_token锛?  if (!videoUrl && !images.length) {
     var noteIdMatch = realUrl.match(/\/item\/([a-f0-9]+)/);
     if (noteIdMatch) {
       var noteId = noteIdMatch[1];
@@ -433,9 +422,8 @@ async function parseXiaohongshu(originalUrl) {
     }
   }
 
-  // 有封面图就算成功，避免报错
-  if (!videoUrl && !images.length && !cover) {
-    throw new Error('未提取到小红书内容（各方案均失败），页面结构可能已变化');
+  // 鏈夊皝闈㈠浘灏辩畻鎴愬姛锛岄伩鍏嶆姤閿?  if (!videoUrl && !images.length && !cover) {
+    throw new Error('鏈彁鍙栧埌灏忕孩涔﹀唴瀹癸紙鍚勬柟妗堝潎澶辫触锛夛紝椤甸潰缁撴瀯鍙兘宸插彉鍖?);
   }
 
   return {
@@ -447,7 +435,7 @@ async function parseXiaohongshu(originalUrl) {
     url: videoUrl || '',
     images: images,
   };
-}// ================= 微博 =================
+}// ================= 寰崥 =================
 async function parseWeibo(originalUrl) {
   const html = await fetchHtml(originalUrl, { Referer: 'https://weibo.com/' });
 
@@ -459,7 +447,7 @@ async function parseWeibo(originalUrl) {
   const coverMatch = html.match(/<meta\s+property="og:image"[^>]*content="([^"]+)"/);
   const authorMatch = html.match(/"screen_name"\s*:\s*"([^"]+)"/);
 
-  if (!videoUrl) throw new Error('未提取到微博视频地址');
+  if (!videoUrl) throw new Error('鏈彁鍙栧埌寰崥瑙嗛鍦板潃');
 
   return {
     type: 'video',
@@ -473,9 +461,8 @@ async function parseWeibo(originalUrl) {
 }
 
 
-// ================= 调试工具 =================
-// 在 URL 上加 &debug=1 可以查看页面片段，方便定位问题
-async function fetchDebugHtml(url) {
+// ================= 璋冭瘯宸ュ叿 =================
+// 鍦?URL 涓婂姞 &debug=1 鍙互鏌ョ湅椤甸潰鐗囨锛屾柟渚垮畾浣嶉棶棰?async function fetchDebugHtml(url) {
   const res = await fetch(url, { headers: {
     'User-Agent': UA_MOBILE,
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -483,8 +470,8 @@ async function fetchDebugHtml(url) {
   } });
   const text = await res.text();
   let debug = '=== URL ===\n' + (res.url || url) + '\n\n';
-  debug += '=== 全部 HTML 前 50000 字符 ===\n' + text.substring(0, 50000) + '\n\n';
-  debug += '=== script 标签摘要 ===\n';
+  debug += '=== 鍏ㄩ儴 HTML 鍓?50000 瀛楃 ===\n' + text.substring(0, 50000) + '\n\n';
+  debug += '=== script 鏍囩鎽樿 ===\n';
   var scriptRe = /<script[^>]*>([\s\S]{0,800})?<\/script>/g;
   var m; var count = 0;
   while ((m = scriptRe.exec(text)) !== null && count < 30) {
@@ -494,7 +481,7 @@ async function fetchDebugHtml(url) {
     count++;
   }
   var patterns = ['__INITIAL_STATE__', '__NEXT_DATA__', '__NUXT__', '__APOLLO_STATE__', 'RENDER_DATA', 'item_list', 'aweme_list', 'note_detail', 'play_addr'];
-  debug += '\n=== JSON 数据搜索 ===\n';
+  debug += '\n=== JSON 鏁版嵁鎼滅储 ===\n';
   var found = false;
   patterns.forEach(function(p) {
     var idx = text.indexOf(p);
@@ -502,13 +489,13 @@ async function fetchDebugHtml(url) {
       found = true;
       var before = text.substring(Math.max(0, idx - 200), idx);
       var after = text.substring(idx, Math.min(text.length, idx + 2000));
-      debug += '找到 [' + p + '] 位置: ' + idx + '\n前文: ' + before + '\n后文: ' + after + '\n\n';
+      debug += '鎵惧埌 [' + p + '] 浣嶇疆: ' + idx + '\n鍓嶆枃: ' + before + '\n鍚庢枃: ' + after + '\n\n';
     }
   });
-  if (!found) debug += '(页面上没有)\n';
+  if (!found) debug += '(椤甸潰涓婃病鏈?\n';
   return debug;
 }
-export default async function handler(req, res) {
+module.exports = async function(req, res) {
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -517,9 +504,9 @@ export default async function handler(req, res) {
     }
 
     const targetUrl = req.query.url;
-        if (!targetUrl) return sendJson(res, { code: 400, msg: '缺少 url 参数' }, 400);
+        if (!targetUrl) return sendJson(res, { code: 400, msg: '缂哄皯 url 鍙傛暟' }, 400);
     
-        // 调试模式
+        // 璋冭瘯妯″紡
         if (req.query.debug === '1') {
           try {
             const debugInfo = await fetchDebugHtml(targetUrl);
@@ -527,10 +514,10 @@ export default async function handler(req, res) {
             res.setHeader('Access-Control-Allow-Origin', '*');
             return res.status(200).send(debugInfo);
           } catch (e) {
-            return sendJson(res, { code: 500, msg: '调试抓取失败: ' + e.message }, 500);
+            return sendJson(res, { code: 500, msg: '璋冭瘯鎶撳彇澶辫触: ' + e.message }, 500);
           }
         }
-    if (!targetUrl) return fail('缺少 url 参数', 400);
+    if (!targetUrl) return fail('缂哄皯 url 鍙傛暟', 400);
 
     const platform = detectPlatform(targetUrl);
 
@@ -553,11 +540,12 @@ export default async function handler(req, res) {
           data = await parseWeibo(targetUrl);
           break;
         default:
-          return sendJson(res, { code: 400, msg: '暂不支持该平台链接' }, 400);
+          return sendJson(res, { code: 400, msg: '鏆備笉鏀寔璇ュ钩鍙伴摼鎺? }, 400);
       }
-      return sendJson(res, { code: 200, msg: '解析成功', platform: platform, data: data });
+      return sendJson(res, { code: 200, msg: '瑙ｆ瀽鎴愬姛', platform: platform, data: data });
     } catch (e) {
-      return sendJson(res, { code: 500, msg: '解析失败: ' + (e && e.message ? e.message : String(e)) }, 500);
+      return sendJson(res, { code: 500, msg: '瑙ｆ瀽澶辫触: ' + (e && e.message ? e.message : String(e)) }, 500);
     }
   
 }
+
